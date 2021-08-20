@@ -1,10 +1,6 @@
 use chrono::{Datelike, TimeZone, Timelike, Utc};
 use dotenv;
-use serenity::{
-    async_trait,
-    model::{channel::Message, gateway::Ready},
-    prelude::*,
-};
+use serenity::{async_trait, model::{channel::Message, gateway::Ready, id::UserId}, prelude::*};
 use std::env;
 
 const PREFIX: &str = "!";
@@ -31,7 +27,7 @@ impl EventHandler for Handler {
 
         if command == "yp" {
             if args.is_empty() {
-                if let Err(why) = msg.channel_id.say(&ctx.http, year_progress()).await {
+                if let Err(why) = msg.channel_id.say(&ctx.http, year_progress(None).await).await {
                     println!("Error sending message: {:?}", why);
                 }
             }
@@ -55,7 +51,7 @@ impl EventHandler for Handler {
     }
 }
 
-fn year_progress() -> String {
+async fn year_progress(opt: Option<&Client>) -> String {
     let today = Utc::now();
     let current_year = today.year();
 
@@ -77,7 +73,17 @@ fn year_progress() -> String {
     let progress_bar = format!("{:░<15}", filled);
     let direct_msg = format!("[{}] {}%", progress_bar, percentage);
 
-    return direct_msg;
+    return match opt {
+        None => direct_msg,
+        Some(client) => {
+            let user_id = env::var("USER_ID").expect("Expected a token in the environment").parse::<u64>().unwrap();
+            let user = UserId(user_id).to_user(&client.cache_and_http).await.unwrap();
+            let msg = user.direct_message(&client.cache_and_http.http, |m| {
+                m.content(direct_msg)
+            }).await.unwrap();
+            msg.content
+        }
+    }
 }
 
 #[tokio::main]
@@ -94,4 +100,6 @@ async fn main() {
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
     }
+
+    //println!("{}", year_progress(Some(&client)).await);
 }
