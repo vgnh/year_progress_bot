@@ -1,6 +1,6 @@
 use chrono::{Datelike, TimeZone, Timelike, Utc};
 use dotenv;
-use serenity::{async_trait, model::{channel::Message, gateway::Ready, id::UserId}, prelude::*};
+use serenity::{CacheAndHttp, async_trait, model::{channel::Message, gateway::Ready, id::UserId}, prelude::*};
 use std::env;
 
 const PREFIX: &str = "!";
@@ -51,7 +51,7 @@ impl EventHandler for Handler {
     }
 }
 
-async fn year_progress(opt: Option<&Client>) -> String {
+async fn year_progress(opt: Option<&CacheAndHttp>) -> String {
     let today = Utc::now();
     let current_year = today.year();
 
@@ -75,10 +75,10 @@ async fn year_progress(opt: Option<&Client>) -> String {
 
     return match opt {
         None => direct_msg,
-        Some(client) => {
+        Some(cache_and_http) => {
             let user_id = env::var("USER_ID").expect("Expected a token in the environment").parse::<u64>().unwrap();
-            let user = UserId(user_id).to_user(&client.cache_and_http).await.unwrap();
-            let msg = user.direct_message(&client.cache_and_http.http, |m| {
+            let user = UserId(user_id).to_user(&cache_and_http).await.unwrap();
+            let msg = user.direct_message(&cache_and_http, |m| {
                 m.content(direct_msg)
             }).await.unwrap();
             msg.content
@@ -97,9 +97,13 @@ async fn main() {
         .await
         .expect("Err creating client");
 
+    //TODO: loop year_progress() to send dm regularly
+    /* let cache_and_http = client.cache_and_http.clone();
+    tokio::spawn(async move {
+        year_progress(Some(&cache_and_http)).await;
+    }); */
+    
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
     }
-
-    //println!("{}", year_progress(Some(&client)).await);
 }
