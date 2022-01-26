@@ -76,11 +76,11 @@ async fn year_progress(opt: Option<&CacheAndHttp>) -> String {
     return match opt {
         None => direct_msg,
         Some(cache_and_http) => {
-            let user_id = env::var("USER_ID").expect("Expected a token in the environment").parse::<u64>().unwrap();
-            let user = UserId(user_id).to_user(&cache_and_http).await.unwrap();
+            let user_id = env::var("USER_ID").expect("Expected a token in the environment").parse::<u64>().expect("Unable to parse token.");
+            let user = UserId(user_id).to_user(&cache_and_http).await.expect("Unable to find User by its id in the cache.");
             let msg = user.direct_message(&cache_and_http, |m| {
                 m.content(direct_msg)
-            }).await.unwrap();
+            }).await.expect("Unable to send DM.");
             msg.content
         }
     }
